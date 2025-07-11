@@ -1,9 +1,14 @@
 import pandas as pd
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_community.retrievers import BM25Retriever
+import pickle
+
 
 data_path="./data/spot-data.csv"
+df=pd.read_csv(data_path)
 
-df=pd.read_csv(data_path,"utf-8")
 
 documents=[]
 for _,row in df.iterrows():
@@ -13,5 +18,17 @@ for _,row in df.iterrows():
         "title":row["Title"]
     }
     
-    doc=Document(page_content,metadata)
+    doc=Document(page_content=page_content,metadata=metadata)
     documents.append(doc)
+
+
+embeddings=GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+vectorstore=Chroma.from_documents(
+    documents=documents,
+    embedding=embeddings,
+    persist_directory="./vectorstore",
+)
+
+bm_ret=BM25Retriever.from_documents(documents)
+with open("./bm25.pkl",'wb') as f:
+    pickle.dump(bm_ret,f)
